@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuarios y Mascotas</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <script type="module" src="/js/main.js"></script>
+</head>
+<body>
+  <header>
+    <h1>Usuarios y Mascotas</h1>
+  </header>
+
+  <main class="grid">
+    <section aria-labelledby="users-title">
+      <h2 id="users-title">Nuevo usuario</h2>
+      <form id="user-form" data-endpoint="/api/users" data-list="user-list" novalidate>
+        <label for="firstname">Nombre</label>
+        <input id="firstname" name="firstname" required>
+
+        <label for="lastname">Apellido</label>
+        <input id="lastname" name="lastname" required>
+
+        <label for="username">Usuario</label>
+        <input id="username" name="username" autocomplete="username" required>
+
+        <label for="password">Contraseña</label>
+        <div class="password-field">
+          <input id="password" name="password" type="password" autocomplete="new-password" required>
+          <button type="button" class="toggle-password" aria-controls="password" aria-pressed="false">Mostrar</button>
+        </div>
+        <small class="hint">Se guarda encriptada (scrypt + salt) y nunca se devuelve en las respuestas.</small>
+
+        <label for="avatar">Avatar</label>
+        <input id="avatar" name="avatar" type="file" accept="image/*">
+
+        <button type="submit">Crear usuario</button>
+        <p class="msg" role="status" aria-live="polite"></p>
+      </form>
+
+      <h2>Usuarios registrados</h2>
+      <ul class="cards" id="user-list"></ul>
+    </section>
+
+    <section aria-labelledby="pets-title">
+      <h2 id="pets-title">Nueva mascota</h2>
+      <form id="pet-form" data-endpoint="/api/pets" data-list="pet-list" novalidate>
+        <label for="especie">Especie</label>
+        <input id="especie" name="especie" required>
+
+        <label for="color">Color</label>
+        <input id="color" name="color" required>
+
+        <label for="edad">Edad</label>
+        <input id="edad" name="edad" type="number" min="0" required>
+
+        <label for="sexo">Sexo</label>
+        <select id="sexo" name="sexo" required>
+          <option value="macho">Macho</option>
+          <option value="hembra">Hembra</option>
+        </select>
+
+        <label for="img">Imágenes (máx. 5)</label>
+        <input id="img" name="img" type="file" accept="image/*" multiple>
+
+        <button type="submit">Crear mascota</button>
+        <p class="msg" role="status" aria-live="polite"></p>
+      </form>
+
+      <h2>Mascotas registradas</h2>
+      <ul class="cards" id="pet-list"></ul>
+    </section>
+  </main>
+</body>
+</html>

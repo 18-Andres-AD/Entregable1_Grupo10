@@ -1,0 +1,16 @@
+{
+  "name": "entregable1_grupo10",
+  "version": "1.0.0",
+  "description": "API REST de usuarios y mascotas con persistencia en archivos JSON, multer y archivos estáticos",
+  "main": "src/app.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/app.js",
+    "dev": "node --watch src/app.js"
+  },
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "multer": "^2.0.0"
+  }
+}
