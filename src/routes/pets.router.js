@@ -12,6 +12,11 @@ const borrarImagenes = async (imagenes = []) => {
   }
 };
 
+const edadValida = (edad) =>
+  (typeof edad === 'number' || (typeof edad === 'string' && edad.trim() !== '')) &&
+  Number.isFinite(Number(edad)) &&
+  Number(edad) >= 0;
+
 router.get('/', async (req, res) => {
   try {
     const mascotas = await leerArchivo(rutaMascotas);
@@ -40,11 +45,16 @@ router.post('/', upload.array('img', 5), async (req, res) => {
   const img = rutasDeImagenes(req.files);
 
   try {
-    const { especie, color, edad, sexo } = req.body;
+    const { especie, color, edad, sexo } = req.body ?? {};
 
-    if (!especie || !color || !edad || !sexo) {
+    if (!especie || !color || edad === undefined || !sexo) {
       await borrarImagenes(img);
       return res.status(400).json({ error: 'especie, color, edad y sexo son obligatorios' });
+    }
+
+    if (!edadValida(edad)) {
+      await borrarImagenes(img);
+      return res.status(400).json({ error: 'La edad debe ser un número mayor o igual a 0' });
     }
 
     const mascotas = await leerArchivo(rutaMascotas);
@@ -81,11 +91,16 @@ router.put('/:id', upload.array('img', 5), async (req, res) => {
     }
 
     const mascota = mascotas[posicion];
-    const { especie, color, edad, sexo, reemplazarImagenes } = req.body;
+    const { especie, color, edad, sexo, reemplazarImagenes } = req.body ?? {};
+
+    if (edad !== undefined && !edadValida(edad)) {
+      await borrarImagenes(imagenesNuevas);
+      return res.status(400).json({ error: 'La edad debe ser un número mayor o igual a 0' });
+    }
 
     if (especie) mascota.especie = especie;
     if (color) mascota.color = color;
-    if (edad) mascota.edad = Number(edad);
+    if (edad !== undefined) mascota.edad = Number(edad);
     if (sexo) mascota.sexo = sexo;
 
     if (imagenesNuevas.length > 0) {

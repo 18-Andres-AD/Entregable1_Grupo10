@@ -81,7 +81,7 @@ router.put('/:id', upload.single('avatar'), async (req, res) => {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const { firstname, lastname, username, password } = req.body;
+    const { firstname, lastname, username, password } = req.body ?? {};
 
     if (username && usuarios.some((u) => u.username === username && u.id !== usuario.id)) {
       await borrarImagen(avatarNuevo);
@@ -93,12 +93,11 @@ router.put('/:id', upload.single('avatar'), async (req, res) => {
     if (username) usuario.username = username;
     if (password) usuario.password = encriptarPassword(password);
 
-    if (avatarNuevo) {
-      await borrarImagen(usuario.avatar);
-      usuario.avatar = avatarNuevo;
-    }
+    const avatarAnterior = usuario.avatar;
+    if (avatarNuevo) usuario.avatar = avatarNuevo;
 
     await guardarArchivo(rutaUsuarios, usuarios);
+    if (avatarNuevo) await borrarImagen(avatarAnterior);
 
     res.status(200).json(quitarPassword(usuario));
   } catch (error) {
