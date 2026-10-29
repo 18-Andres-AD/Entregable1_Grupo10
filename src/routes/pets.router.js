@@ -4,10 +4,13 @@ import { leerArchivo, guardarArchivo, generarId, borrarImagen, rutaMascotas } fr
 
 const router = Router();
 
+const rutasDeImagenes = (archivos = []) => archivos.map((archivo) => `/img/pets/${archivo.filename}`);
 
-const rutasImagenes = (archivos = []) => archivos.map((archivo) => `/img/pets/${archivo.filename}`);
-const borrarImagenes = (imagenes) => Promise.all(imagenes.map(borrarImagen));
-const edadValida = (edad) => edad !== '' && !isNaN(edad) && Number(edad) >= 0;
+const borrarImagenes = async (imagenes = []) => {
+  for (const imagen of imagenes) {
+    await borrarImagen(imagen);
+  }
+};
 
 router.get('/', async (req, res) => {
   try {
@@ -34,19 +37,14 @@ router.get('/:id', async (req, res) => {
 });
 
 router.post('/', upload.array('img', 5), async (req, res) => {
-  const img = rutasImagenes(req.files);
+  const img = rutasDeImagenes(req.files);
 
   try {
-    const { especie, color, edad, sexo } = req.body ?? {};
+    const { especie, color, edad, sexo } = req.body;
 
-    if (!especie || !color || edad === undefined || !sexo) {
+    if (!especie || !color || !edad || !sexo) {
       await borrarImagenes(img);
       return res.status(400).json({ error: 'especie, color, edad y sexo son obligatorios' });
-    }
-
-    if (!edadValida(edad)) {
-      await borrarImagenes(img);
-      return res.status(400).json({ error: 'La edad debe ser un número mayor o igual a 0' });
     }
 
     const mascotas = await leerArchivo(rutaMascotas);
@@ -71,37 +69,39 @@ router.post('/', upload.array('img', 5), async (req, res) => {
 });
 
 router.put('/:id', upload.array('img', 5), async (req, res) => {
-  const img = rutasImagenes(req.files);
+  const imagenesNuevas = rutasDeImagenes(req.files);
 
   try {
     const mascotas = await leerArchivo(rutaMascotas);
-    const mascota = mascotas.find((m) => m.id === Number(req.params.id));
+    const posicion = mascotas.findIndex((m) => m.id === Number(req.params.id));
 
-    if (!mascota) {
-      await borrarImagenes(img);
+    if (posicion === -1) {
+      await borrarImagenes(imagenesNuevas);
       return res.status(404).json({ error: 'Mascota no encontrada' });
     }
 
-    const { especie, color, edad, sexo } = req.body ?? {};
-
-    if (edad !== undefined && !edadValida(edad)) {
-      await borrarImagenes(img);
-      return res.status(400).json({ error: 'La edad debe ser un número mayor o igual a 0' });
-    }
+    const mascota = mascotas[posicion];
+    const { especie, color, edad, sexo, reemplazarImagenes } = req.body;
 
     if (especie) mascota.especie = especie;
     if (color) mascota.color = color;
-    if (edad !== undefined) mascota.edad = Number(edad);
+    if (edad) mascota.edad = Number(edad);
     if (sexo) mascota.sexo = sexo;
 
-    // Las imágenes nuevas se agregan a las que ya tenía la mascota
-    mascota.img = [...(mascota.img || []), ...img];
+    if (imagenesNuevas.length > 0) {
+      if (reemplazarImagenes === 'true') {
+        await borrarImagenes(mascota.img);
+        mascota.img = imagenesNuevas;
+      } else {
+        mascota.img = [...(mascota.img || []), ...imagenesNuevas];
+      }
+    }
 
     await guardarArchivo(rutaMascotas, mascotas);
 
     res.status(200).json(mascota);
   } catch (error) {
-    await borrarImagenes(img);
+    await borrarImagenes(imagenesNuevas);
     res.status(500).json({ error: 'Error al actualizar mascota' });
   }
 });
@@ -109,17 +109,17 @@ router.put('/:id', upload.array('img', 5), async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const mascotas = await leerArchivo(rutaMascotas);
-    const indice = mascotas.findIndex((m) => m.id === Number(req.params.id));
+    const posicion = mascotas.findIndex((m) => m.id === Number(req.params.id));
 
-    if (indice === -1) {
+    if (posicion === -1) {
       return res.status(404).json({ error: 'Mascota no encontrada' });
     }
 
-    const [eliminada] = mascotas.splice(indice, 1);
+    const [eliminada] = mascotas.splice(posicion, 1);
     await guardarArchivo(rutaMascotas, mascotas);
-    await borrarImagenes(eliminada.img || []);
+    await borrarImagenes(eliminada.img);
 
-    res.status(200).json(eliminada);
+    res.status(200).json({ mensaje: 'Mascota eliminada', mascota: eliminada });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar mascota' });
   }

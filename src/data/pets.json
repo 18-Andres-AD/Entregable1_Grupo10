@@ -1,12 +1,12 @@
 [
   {
     "id": 1,
-    "especie": "Lobo",
-    "color": "Blanco",
-    "edad": 6,
+    "especie": "Gato",
+    "color": "Negro",
+    "edad": 2,
     "sexo": "macho",
     "img": [
-      "/img/pets/1793243299537-mascota.jpg"
+      "/img/pets/1793241106704-stray-videojuego_3840x2160_xtrafondos.com.jpg"
     ]
   }
 ]

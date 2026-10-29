@@ -99,7 +99,7 @@ En `users.json` queda así:
 
 ## RE-03: Contraseñas con crypto
 
-**Dónde está:** `src/utils/crypto.js`, y se usa en `src/routes/users.router.js` (líneas 9 y 52).
+**Dónde está:** `src/utils/crypto.js`, y se usa en `src/routes/users.router.js` (líneas 9, 58 y 94).
 
 ```js
 export const encriptarPassword = (password) => {
@@ -120,13 +120,14 @@ export const encriptarPassword = (password) => {
    const quitarPassword = ({ password, ...usuario }) => usuario;
    ```
 
-   Saca el campo `password` y devuelve lo demás. Se usa en el `GET` y en la respuesta del `POST`.
+   Saca el campo `password` y devuelve lo demás. Se usa en todas las respuestas de usuarios.
+6. En el `PUT`, si llega una contraseña nueva, se vuelve a encriptar antes de guardarla (línea 94).
 
 ---
 
 ## RE-04: Router de usuarios
 
-**Dónde está:** `src/routes/users.router.js`. Se conecta en `src/app.js`, línea 21:
+**Dónde está:** `src/routes/users.router.js`. Se conecta en `src/app.js`, línea 19:
 
 ```js
 app.use('/api/users', usersRouter);
@@ -134,13 +135,13 @@ app.use('/api/users', usersRouter);
 
 Como el prefijo ya está ahí, dentro del router solo escribimos `/` y `/:id`.
 
-| Endpoint | Línea | Estado |
+| Endpoint | Línea | Qué hace |
 |---|---|---|
-| `GET /api/users` | 11 | Hecho. Lee `users.json` y quita el password |
-| `GET /api/users/:id` | 20 | Pendiente (responde 501) |
-| `POST /api/users` | 28 | Hecho |
-| `PUT /api/users/:id` | 66 | Pendiente, ya tiene `upload.single('avatar')` |
-| `DELETE /api/users/:id` | 74 | Pendiente (responde 501) |
+| `GET /api/users` | 11 | Lista todos los usuarios sin password |
+| `GET /api/users/:id` | 20 | Devuelve un usuario sin password, o 404 si no existe |
+| `POST /api/users` | 35 | Crea el usuario con su foto |
+| `PUT /api/users/:id` | 72 | Cambia datos, contraseña o foto |
+| `DELETE /api/users/:id` | 110 | Borra el usuario del JSON y su foto |
 
 **Cómo funciona el POST:**
 1. `upload.single('avatar')` guarda la foto en `public/img/users`.
@@ -151,36 +152,62 @@ Como el prefijo ya está ahí, dentro del router solo escribimos `/` y `/:id`.
 6. Encripta la contraseña y guarda con `guardarArchivo`.
 7. Responde 201 con el usuario, sin password.
 
+**Cómo funciona el PUT:**
+1. Busca el usuario por id. Si no existe, responde 404.
+2. Si se manda un `username` que ya tiene otro usuario, responde 400.
+3. Solo cambia los campos que lleguen. Si llega `password`, la encripta de nuevo.
+4. Si llega una foto nueva, borra la anterior de `public/img/users` y guarda la nueva ruta.
+5. Si algo falla, borra la foto nueva para que no quede suelta.
+
+**Cómo funciona el DELETE:** saca el usuario de `users.json` y borra su foto del disco.
+
 **Funciones de `src/utils/fileManager.js`:**
 - `leerArchivo` y `guardarArchivo`: leen y escriben los JSON con `fs/promises`.
 - `generarId`: calcula el siguiente id.
-- `borrarImagen`: borra una imagen usando la ruta que queda en el JSON. Nos va a servir en el PUT (cambiar la foto) y en el DELETE.
+- `borrarImagen`: borra una imagen usando la ruta que queda en el JSON. Se usa cuando algo falla, al cambiar la foto en el PUT y en el DELETE.
 
 ---
 
 ## RE-05: Router de mascotas
 
-**Dónde está:** `src/routes/pets.router.js`. Se conecta en `src/app.js`, línea 22:
+**Dónde está:** `src/routes/pets.router.js`. Se conecta en `src/app.js`, línea 20:
 
 ```js
 app.use('/api/pets', petsRouter);
 ```
 
-| Endpoint | Línea | Estado |
+| Endpoint | Línea | Qué hace |
 |---|---|---|
-| `GET /api/pets` | 7 | Pendiente (responde 501) |
-| `GET /api/pets/:id` | 15 | Pendiente (responde 501) |
-| `POST /api/pets` | 23 | Pendiente, ya tiene `upload.array('img', 5)` |
-| `PUT /api/pets/:id` | 31 | Pendiente, ya tiene `upload.array('img', 5)` |
-| `DELETE /api/pets/:id` | 39 | Pendiente (responde 501) |
+| `GET /api/pets` | 15 | Devuelve todas las mascotas de `pets.json` |
+| `GET /api/pets/:id` | 24 | Devuelve una mascota, o 404 si no existe |
+| `POST /api/pets` | 39 | Crea la mascota con hasta 5 fotos |
+| `PUT /api/pets/:id` | 71 | Cambia datos y agrega o reemplaza fotos |
+| `DELETE /api/pets/:id` | 109 | Borra la mascota del JSON y sus fotos |
 
-**Lo que ya está:** el prefijo, las cinco rutas y `upload.array('img', 5)`, que acepta hasta 5 imágenes en el campo `img`. Como el campo no se llama `avatar`, multer las guarda en `public/img/pets`. Si mandan más de 5, multer da error y `app.js` responde 400.
-
-**Lo que falta:** en el POST, multer deja los archivos en `req.files` (un arreglo), entonces el campo `img` se puede armar así:
+**Cómo se guardan las fotos:** `upload.array('img', 5)` acepta hasta 5 imágenes en el campo `img`. Como el campo no se llama `avatar`, multer las guarda en `public/img/pets`. Si mandan más de 5, multer da error y `app.js` responde 400. Multer deja los archivos en `req.files` (un arreglo), y con eso armamos las rutas públicas:
 
 ```js
-const img = (req.files || []).map((archivo) => `/img/pets/${archivo.filename}`);
+const rutasDeImagenes = (archivos = []) => archivos.map((archivo) => `/img/pets/${archivo.filename}`);
 ```
+
+En `pets.json` queda algo así:
+
+```json
+{
+  "id": 1,
+  "especie": "Gato",
+  "color": "Negro",
+  "edad": 2,
+  "sexo": "hembra",
+  "img": ["/img/pets/1793240467299-gato.jpg", "/img/pets/1793240467310-gato2.jpg"]
+}
+```
+
+**POST:** revisa que vengan `especie`, `color`, `edad` y `sexo`. Si falta alguno, borra las fotos que multer ya guardó y responde 400. Si todo está bien, crea el id con `generarId`, guarda y responde 201.
+
+**PUT:** solo cambia los campos que se manden. Si llegan fotos nuevas, por defecto se **agregan** a las que ya tiene. Si además se manda `reemplazarImagenes = true`, se borran las fotos viejas y quedan solo las nuevas.
+
+**DELETE:** saca la mascota de `pets.json` y borra sus fotos de `public/img/pets`, para que no queden archivos sin dueño.
 
 ---
 
@@ -190,9 +217,9 @@ const img = (req.files || []).map((archivo) => `/img/pets/${archivo.filename}`);
 |---|---|---|
 | RE-01 Archivos estáticos | `src/app.js` | Completo |
 | RE-02 multer.diskStorage | `src/middlewares/multer.middleware.js` | Completo |
-| RE-03 crypto | `src/utils/crypto.js` | Se usa en POST y GET; falta en PUT |
-| RE-04 Usuarios | `src/routes/users.router.js` | GET y POST listos; falta GET por id, PUT y DELETE |
-| RE-05 Mascotas | `src/routes/pets.router.js` | Rutas y multer listos; falta la lógica |
+| RE-03 crypto | `src/utils/crypto.js` | Se usa en POST y PUT; el password nunca se devuelve |
+| RE-04 Usuarios | `src/routes/users.router.js` | Completo |
+| RE-05 Mascotas | `src/routes/pets.router.js` | Completo |
 
 ## Cómo probarlo
 

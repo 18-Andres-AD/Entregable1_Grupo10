@@ -70,21 +70,21 @@ router.post('/', upload.single('avatar'), async (req, res) => {
 });
 
 router.put('/:id', upload.single('avatar'), async (req, res) => {
-  const avatar = req.file ? `/img/users/${req.file.filename}` : null;
+  const avatarNuevo = req.file ? `/img/users/${req.file.filename}` : null;
 
   try {
     const usuarios = await leerArchivo(rutaUsuarios);
     const usuario = usuarios.find((u) => u.id === Number(req.params.id));
 
     if (!usuario) {
-      await borrarImagen(avatar);
+      await borrarImagen(avatarNuevo);
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const { firstname, lastname, username, password } = req.body ?? {};
+    const { firstname, lastname, username, password } = req.body;
 
     if (username && usuarios.some((u) => u.username === username && u.id !== usuario.id)) {
-      await borrarImagen(avatar);
+      await borrarImagen(avatarNuevo);
       return res.status(400).json({ error: 'El username ya está registrado' });
     }
 
@@ -93,15 +93,16 @@ router.put('/:id', upload.single('avatar'), async (req, res) => {
     if (username) usuario.username = username;
     if (password) usuario.password = encriptarPassword(password);
 
-    const avatarAnterior = usuario.avatar;
-    if (avatar) usuario.avatar = avatar;
+    if (avatarNuevo) {
+      await borrarImagen(usuario.avatar);
+      usuario.avatar = avatarNuevo;
+    }
 
     await guardarArchivo(rutaUsuarios, usuarios);
-    if (avatar) await borrarImagen(avatarAnterior);
 
     res.status(200).json(quitarPassword(usuario));
   } catch (error) {
-    await borrarImagen(avatar);
+    await borrarImagen(avatarNuevo);
     res.status(500).json({ error: 'Error al actualizar usuario' });
   }
 });
@@ -109,17 +110,17 @@ router.put('/:id', upload.single('avatar'), async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const usuarios = await leerArchivo(rutaUsuarios);
-    const indice = usuarios.findIndex((u) => u.id === Number(req.params.id));
+    const posicion = usuarios.findIndex((u) => u.id === Number(req.params.id));
 
-    if (indice === -1) {
+    if (posicion === -1) {
       return res.status(404).json({ error: 'Usuario no encontrado' });
     }
 
-    const [eliminado] = usuarios.splice(indice, 1);
+    const [eliminado] = usuarios.splice(posicion, 1);
     await guardarArchivo(rutaUsuarios, usuarios);
     await borrarImagen(eliminado.avatar);
 
-    res.status(200).json(quitarPassword(eliminado));
+    res.status(200).json({ mensaje: 'Usuario eliminado', usuario: quitarPassword(eliminado) });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar usuario' });
   }
