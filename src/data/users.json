@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": 1,
+    "firstname": "Andres ",
+    "lastname": "Diaz",
+    "username": "andresdiaz@gmail.com",
+    "password": "6fe942eb57137622ff6d61d513a9db66:d86d46c0cf901bd5c75e7227dbafc4232fd496a0ef564abdadbc7957adcba490992be4cc8c1a4543fa3c791aa78e91829d82bd5a34b376c754f6afe2f07010ec",
+    "avatar": "/img/users/1793216008966-160959234.jpg"
+  }
+]

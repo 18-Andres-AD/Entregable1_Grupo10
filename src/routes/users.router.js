@@ -1,18 +1,17 @@
 import { Router } from 'express';
 import { upload } from '../middlewares/multer.middleware.js';
-import { hashPassword } from '../utils/crypto.js';
-import { readJSON, writeJSON, nextId, deletePublicFile, USERS_PATH } from '../utils/fileManager.js';
+import { encriptarPassword } from '../utils/crypto.js';
+import { leerArchivo, guardarArchivo, generarId, borrarImagen, rutaUsuarios } from '../utils/fileManager.js';
 
 const router = Router();
 
 
-const sinPassword = ({ password, ...user }) => user;
+const quitarPassword = ({ password, ...usuario }) => usuario;
 
-
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const users = await readJSON(USERS_PATH);
-    res.status(200).json(users.map(sinPassword));
+    const usuarios = await leerArchivo(rutaUsuarios);
+    res.status(200).json(usuarios.map(quitarPassword));
   } catch (error) {
     res.status(500).json({ error: 'Error al leer usuarios' });
   }
@@ -33,36 +32,35 @@ router.post('/', upload.single('avatar'), async (req, res) => {
     const { firstname, lastname, username, password } = req.body;
 
     if (!firstname || !lastname || !username || !password) {
-      await deletePublicFile(avatar); // no dejar imágenes huérfanas
+      await borrarImagen(avatar);
       return res.status(400).json({ error: 'firstname, lastname, username y password son obligatorios' });
     }
 
-    const users = await readJSON(USERS_PATH);
+    const usuarios = await leerArchivo(rutaUsuarios);
 
-    if (users.some((u) => u.username === username)) {
-      await deletePublicFile(avatar);
+    if (usuarios.some((u) => u.username === username)) {
+      await borrarImagen(avatar);
       return res.status(400).json({ error: 'El username ya está registrado' });
     }
 
-    const nuevo = {
-      id: nextId(users),
+    const nuevoUsuario = {
+      id: generarId(usuarios),
       firstname,
       lastname,
       username,
-      password: hashPassword(password), // RE-03: nunca en texto plano
+      password: encriptarPassword(password),
       avatar,
     };
 
-    users.push(nuevo);
-    await writeJSON(USERS_PATH, users);
+    usuarios.push(nuevoUsuario);
+    await guardarArchivo(rutaUsuarios, usuarios);
 
-    res.status(201).json(sinPassword(nuevo));
+    res.status(201).json(quitarPassword(nuevoUsuario));
   } catch (error) {
-    await deletePublicFile(avatar);
+    await borrarImagen(avatar);
     res.status(500).json({ error: 'Error al crear usuario' });
   }
 });
-
 
 router.put('/:id', upload.single('avatar'), async (req, res) => {
   try {
@@ -71,7 +69,6 @@ router.put('/:id', upload.single('avatar'), async (req, res) => {
     res.status(500).json({ error: 'Error al actualizar usuario' });
   }
 });
-
 
 router.delete('/:id', async (req, res) => {
   try {

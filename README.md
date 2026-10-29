@@ -9,7 +9,7 @@ npm install
 npm run dev     # o: npm start
 ```
 
-Servidor: `http://localhost:3000`
+Servidor: `http://localhost:8080`
 
 ## Endpoints
 
@@ -31,4 +31,4 @@ Servidor: `http://localhost:3000`
 | PUT | `/api/pets/:id` | Actualiza datos o imágenes |
 | DELETE | `/api/pets/:id` | Elimina mascota |
 
-Las imágenes quedan accesibles en `http://localhost:3000/img/users/...` y `http://localhost:3000/img/pets/...`
+Las imágenes quedan accesibles en `http://localhost:8080/img/users/...` y `http://localhost:8080/img/pets/...`

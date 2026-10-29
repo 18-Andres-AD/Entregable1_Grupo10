@@ -1,140 +1,181 @@
-
-async function request(url, options = {}) {
-  const res = await fetch(url, options);
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Error ${res.status}`);
-  return data;
+// Hace la petición y devuelve el JSON, o lanza el error que mande el servidor
+async function pedir(url, opciones = {}) {
+  const respuesta = await fetch(url, opciones);
+  const datos = await respuesta.json().catch(() => ({}));
+  if (!respuesta.ok) {
+    throw new Error(datos.error || 'Error ' + respuesta.status);
+  }
+  return datos;
 }
 
-function el(tag, props = {}, children = []) {
-  const node = Object.assign(document.createElement(tag), props);
-  node.append(...children);
-  return node;
+function crearTarjeta(tipo, foto, inicial, titulo, detalle, urlEliminar) {
+  const li = document.createElement('li');
+  li.className = 'tarjeta ' + tipo;
+
+  let imagen;
+  if (foto) {
+    imagen = document.createElement('img');
+    imagen.src = foto;
+    imagen.alt = titulo;
+  } else {
+    imagen = document.createElement('div');
+    imagen.className = 'sin-foto';
+    imagen.textContent = inicial;
+  }
+
+  const datos = document.createElement('div');
+  datos.className = 'datos';
+  const nombre = document.createElement('strong');
+  nombre.textContent = titulo;
+  const info = document.createElement('span');
+  info.textContent = detalle;
+  datos.append(nombre, info);
+
+  const botonEliminar = document.createElement('button');
+  botonEliminar.className = 'boton-eliminar';
+  botonEliminar.textContent = 'Eliminar';
+  botonEliminar.addEventListener('click', () => eliminar(urlEliminar, botonEliminar));
+
+  li.append(imagen, datos, botonEliminar);
+  return li;
 }
 
-function thumbnail(src, alt) {
-  return src ? el('img', { src, alt, loading: 'lazy' }) : el('div', { className: 'placeholder' });
+function mostrarVacio(lista, texto) {
+  const li = document.createElement('li');
+  li.className = 'vacio';
+  li.textContent = texto;
+  lista.replaceChildren(li);
 }
 
-function card({ image, alt, title, subtitle, badge, deleteUrl }) {
-  const deleteButton = el('button', { type: 'button', className: 'danger', textContent: 'Eliminar' });
-  deleteButton.dataset.url = deleteUrl;
-
-  return el('li', { className: 'card' }, [
-    thumbnail(image, alt),
-    el('div', { className: 'info' }, [
-      el('strong', { textContent: title }),
-      el('br'),
-      el('small', { textContent: subtitle }),
-      ...(badge ? [el('br'), el('span', { className: 'badge', textContent: badge })] : []),
-    ]),
-    deleteButton,
-  ]);
-}
-
-const resources = {
-  'user-list': {
-    endpoint: '/api/users',
-    toCard: (u) => ({
-      image: u.avatar,
-      alt: `Avatar de ${u.username}`,
-      title: `${u.firstname} ${u.lastname}`,
-      subtitle: `@${u.username}`,
-      // la API nunca envía el password: si no viene, está protegido correctamente
-      badge: 'password' in u ? null : 'Contraseña protegida',
-    }),
-  },
-  'pet-list': {
-    endpoint: '/api/pets',
-    toCard: (p) => ({
-      image: p.img?.[0],
-      alt: `Foto de ${p.especie}`,
-      title: `${p.especie} (${p.sexo}, ${p.edad} años)`,
-      subtitle: `${p.color} · ${p.img?.length ?? 0} foto(s)`,
-    }),
-  },
-};
-
-
-async function loadList(listId) {
-  const list = document.getElementById(listId);
-  const { endpoint, toCard } = resources[listId];
-
+async function cargarUsuarios() {
+  const lista = document.getElementById('lista-usuarios');
   try {
-    const items = await request(endpoint);
-    if (!items.length) {
-      list.replaceChildren(el('li', { className: 'empty', textContent: 'Sin registros' }));
+    const usuarios = await pedir('/api/users');
+    if (usuarios.length === 0) {
+      mostrarVacio(lista, 'Todavía no hay usuarios registrados');
       return;
     }
-    list.replaceChildren(
-      ...items.map((item) => card({ ...toCard(item), deleteUrl: `${endpoint}/${item.id}` }))
+    const tarjetas = usuarios.map((usuario) =>
+      crearTarjeta(
+        'usuario',
+        usuario.avatar,
+        usuario.firstname.charAt(0).toUpperCase(),
+        usuario.firstname + ' ' + usuario.lastname,
+        usuario.username,
+        '/api/users/' + usuario.id
+      )
     );
-  } catch (err) {
-    list.replaceChildren(el('li', { className: 'empty', textContent: `No se pudo cargar: ${err.message}` }));
+    lista.replaceChildren(...tarjetas);
+  } catch (error) {
+    mostrarVacio(lista, 'No se pudieron cargar los usuarios: ' + error.message);
   }
 }
 
-function setupDelete(listId) {
-  document.getElementById(listId).addEventListener('click', async (e) => {
-    const button = e.target.closest('button[data-url]');
-    if (!button || !confirm('¿Eliminar este registro?')) return;
-
-    button.disabled = true;
-    try {
-      await request(button.dataset.url, { method: 'DELETE' });
-      await loadList(listId);
-    } catch (err) {
-      alert(err.message);
-      button.disabled = false;
+async function cargarMascotas() {
+  const lista = document.getElementById('lista-mascotas');
+  try {
+    const mascotas = await pedir('/api/pets');
+    if (mascotas.length === 0) {
+      mostrarVacio(lista, 'Todavía no hay mascotas registradas');
+      return;
     }
-  });
+    const tarjetas = mascotas.map((mascota) => {
+      const fotos = mascota.img || [];
+      return crearTarjeta(
+        'mascota',
+        fotos[0],
+        mascota.especie.charAt(0).toUpperCase(),
+        mascota.especie + ' (' + mascota.sexo + ', ' + mascota.edad + ' años)',
+        mascota.color + ' · ' + fotos.length + ' foto(s)',
+        '/api/pets/' + mascota.id
+      );
+    });
+    lista.replaceChildren(...tarjetas);
+  } catch (error) {
+    mostrarVacio(lista, 'No se pudieron cargar las mascotas: ' + error.message);
+  }
 }
 
-function setupForm(form) {
-  const msg = form.querySelector('.msg');
-  const submit = form.querySelector('button[type="submit"]');
-  const { endpoint, list } = form.dataset;
+async function eliminar(url, boton) {
+  if (!confirm('¿Seguro que quieres eliminar este registro?')) return;
 
-  const showMessage = (text, type) => {
-    msg.textContent = text;
-    msg.className = `msg ${type}`;
-  };
+  boton.disabled = true;
+  try {
+    await pedir(url, { method: 'DELETE' });
+    cargarUsuarios();
+    cargarMascotas();
+  } catch (error) {
+    alert(error.message);
+    boton.disabled = false;
+  }
+}
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+function prepararFormulario(formulario, alGuardar) {
+  const mensaje = formulario.querySelector('.mensaje');
+  const boton = formulario.querySelector('button[type="submit"]');
 
-    if (!form.checkValidity()) {
-      showMessage('Completa todos los campos obligatorios', 'error');
+  formulario.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+
+    if (!formulario.checkValidity()) {
+      mensaje.textContent = 'Faltan campos por llenar';
+      mensaje.className = 'mensaje error';
       return;
     }
 
-    submit.disabled = true;
+    boton.disabled = true;
     try {
-      await request(endpoint, { method: 'POST', body: new FormData(form) });
-      showMessage('Creado correctamente', 'ok');
-      form.reset();
-      await loadList(list);
-    } catch (err) {
-      showMessage(err.message, 'error');
+      await pedir(formulario.getAttribute('action'), {
+        method: 'POST',
+        body: new FormData(formulario),
+      });
+      mensaje.textContent = 'Guardado correctamente';
+      mensaje.className = 'mensaje bien';
+      formulario.reset();
+      formulario.querySelectorAll('input[type="file"]').forEach(mostrarArchivos);
+      alGuardar();
+    } catch (error) {
+      mensaje.textContent = error.message;
+      mensaje.className = 'mensaje error';
     } finally {
-      submit.disabled = false;
+      boton.disabled = false;
     }
   });
 }
 
-function setupPasswordToggle(button) {
-  const input = document.getElementById(button.getAttribute('aria-controls'));
-  button.addEventListener('click', () => {
-    const visible = input.type === 'password';
-    input.type = visible ? 'text' : 'password';
-    button.textContent = visible ? 'Ocultar' : 'Mostrar';
-    button.setAttribute('aria-pressed', String(visible));
-  });
+// Cambia el texto de la caja de subida según los archivos elegidos
+function mostrarArchivos(input) {
+  const caja = input.closest('.subir-archivo');
+  const texto = caja.querySelector('.subir-texto');
+
+  if (!caja.dataset.textoInicial) caja.dataset.textoInicial = texto.textContent;
+
+  if (input.files.length === 0) {
+    texto.textContent = caja.dataset.textoInicial;
+    caja.classList.remove('con-archivo');
+  } else if (input.files.length === 1) {
+    texto.textContent = input.files[0].name;
+    caja.classList.add('con-archivo');
+  } else {
+    texto.textContent = input.files.length + ' imágenes seleccionadas';
+    caja.classList.add('con-archivo');
+  }
 }
 
-document.querySelectorAll('.toggle-password').forEach(setupPasswordToggle);
-document.querySelectorAll('form[data-endpoint]').forEach(setupForm);
-Object.keys(resources).forEach((listId) => {
-  setupDelete(listId);
-  loadList(listId);
+document.querySelectorAll('.subir-archivo input').forEach((input) => {
+  input.addEventListener('change', () => mostrarArchivos(input));
 });
+
+const botonVer = document.getElementById('ver-password');
+const campoPassword = document.getElementById('password');
+botonVer.addEventListener('click', () => {
+  const oculta = campoPassword.type === 'password';
+  campoPassword.type = oculta ? 'text' : 'password';
+  botonVer.textContent = oculta ? 'Ocultar' : 'Mostrar';
+});
+
+prepararFormulario(document.getElementById('form-usuario'), cargarUsuarios);
+prepararFormulario(document.getElementById('form-mascota'), cargarMascotas);
+
+cargarUsuarios();
+cargarMascotas();
