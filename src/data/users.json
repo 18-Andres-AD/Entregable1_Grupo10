@@ -6,5 +6,13 @@
     "username": "andresdiaz@gmail.com",
     "password": "6fe942eb57137622ff6d61d513a9db66:d86d46c0cf901bd5c75e7227dbafc4232fd496a0ef564abdadbc7957adcba490992be4cc8c1a4543fa3c791aa78e91829d82bd5a34b376c754f6afe2f07010ec",
     "avatar": "/img/users/1793216008966-160959234.jpg"
+  },
+  {
+    "id": 2,
+    "firstname": "Ousmane",
+    "lastname": "Dembele",
+    "username": "osoriowil2002@gmail.com",
+    "password": "1b152f47299d2702f9a07e743629773d:2183ee4edf4d391c234fa772832de4a48c750c625e62cebfe75439ed287d7521d768f0a998272b8e32c7a9a60bfbc5e117889c8d6411aecb46c9b3e4ffda35ae",
+    "avatar": "/img/users/1793256552624-mascota.jpg"
   }
 ]

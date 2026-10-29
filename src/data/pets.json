@@ -8,5 +8,15 @@
     "img": [
       "/img/pets/1793241106704-stray-videojuego_3840x2160_xtrafondos.com.jpg"
     ]
+  },
+  {
+    "id": 2,
+    "especie": "Lobo",
+    "color": "Blanco",
+    "edad": 4,
+    "sexo": "macho",
+    "img": [
+      "/img/pets/1793256568313-mascota.jpg"
+    ]
   }
 ]
