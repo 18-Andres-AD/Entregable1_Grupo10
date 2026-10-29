@@ -19,7 +19,14 @@ router.get('/', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
   try {
-    res.status(501).json({ error: 'No implementado' });
+    const usuarios = await leerArchivo(rutaUsuarios);
+    const usuario = usuarios.find((u) => u.id === Number(req.params.id));
+
+    if (!usuario) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    res.status(200).json(quitarPassword(usuario));
   } catch (error) {
     res.status(500).json({ error: 'Error al leer usuarios' });
   }
@@ -63,16 +70,57 @@ router.post('/', upload.single('avatar'), async (req, res) => {
 });
 
 router.put('/:id', upload.single('avatar'), async (req, res) => {
+  const avatarNuevo = req.file ? `/img/users/${req.file.filename}` : null;
+
   try {
-    res.status(501).json({ error: 'No implementado' });
+    const usuarios = await leerArchivo(rutaUsuarios);
+    const usuario = usuarios.find((u) => u.id === Number(req.params.id));
+
+    if (!usuario) {
+      await borrarImagen(avatarNuevo);
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const { firstname, lastname, username, password } = req.body;
+
+    if (username && usuarios.some((u) => u.username === username && u.id !== usuario.id)) {
+      await borrarImagen(avatarNuevo);
+      return res.status(400).json({ error: 'El username ya está registrado' });
+    }
+
+    if (firstname) usuario.firstname = firstname;
+    if (lastname) usuario.lastname = lastname;
+    if (username) usuario.username = username;
+    if (password) usuario.password = encriptarPassword(password);
+
+    if (avatarNuevo) {
+      await borrarImagen(usuario.avatar);
+      usuario.avatar = avatarNuevo;
+    }
+
+    await guardarArchivo(rutaUsuarios, usuarios);
+
+    res.status(200).json(quitarPassword(usuario));
   } catch (error) {
+    await borrarImagen(avatarNuevo);
     res.status(500).json({ error: 'Error al actualizar usuario' });
   }
 });
 
 router.delete('/:id', async (req, res) => {
   try {
-    res.status(501).json({ error: 'No implementado' });
+    const usuarios = await leerArchivo(rutaUsuarios);
+    const posicion = usuarios.findIndex((u) => u.id === Number(req.params.id));
+
+    if (posicion === -1) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    const [eliminado] = usuarios.splice(posicion, 1);
+    await guardarArchivo(rutaUsuarios, usuarios);
+    await borrarImagen(eliminado.avatar);
+
+    res.status(200).json({ mensaje: 'Usuario eliminado', usuario: quitarPassword(eliminado) });
   } catch (error) {
     res.status(500).json({ error: 'Error al eliminar usuario' });
   }
