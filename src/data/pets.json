@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "id": 1,
+    "especie": "Lobo",
+    "color": "Blanco",
+    "edad": 6,
+    "sexo": "macho",
+    "img": [
+      "/img/pets/1793243299537-mascota.jpg"
+    ]
+  }
+]
